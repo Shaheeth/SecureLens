@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  securelens-app:
+    build: .
+    container_name: securelens-ai
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./reports_output:/app/reports_output
+    depends_on:
+      - ollama
+    networks:
+      - securelens-net
+
+  # Isolated sandbox profile: used when analyzing untrusted uploads.
+  # Read-only root FS, no network, dropped capabilities, tight resource caps.
+  securelens-analyzer-sandbox:
+    build: .
+    container_name: securelens-analyzer-sandbox
+    profiles: ["sandbox"]
+    entrypoint: ["python", "-m", "backend.orchestrator", "--sandbox-mode"]
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks: []
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: securelens-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - securelens-net
+
+networks:
+  securelens-net:
+    driver: bridge
+
+volumes:
+  ollama_data:

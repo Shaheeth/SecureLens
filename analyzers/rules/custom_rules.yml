@@ -1,0 +1,71 @@
+# SecureLens AI - custom Semgrep rules
+# Supplements the p/owasp-top-ten, p/security-audit, p/secrets registries
+# with a few project-specific patterns.
+
+rules:
+  - id: securelens-flask-sql-fstring
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Flask route builds a SQL query using an f-string with interpolated
+      request data. Use parameterized queries.
+    metadata:
+      cwe: ["CWE-89"]
+      owasp: ["A03:2021 - Injection"]
+      category: sql-injection
+    patterns:
+      - pattern-either:
+          - pattern: cursor.execute(f"...")
+          - pattern: cursor.execute("..." + $X)
+      - pattern-inside: |
+          @app.route(...)
+          def $FUNC(...):
+              ...
+
+  - id: securelens-hardcoded-jwt-secret
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Hardcoded JWT signing secret detected. Store secrets outside source
+      control (environment variable / secrets manager).
+    metadata:
+      cwe: ["CWE-798"]
+      owasp: ["A07:2021 - Identification and Authentication Failures"]
+      category: hardcoded-secret
+    patterns:
+      - pattern-either:
+          - pattern: jwt.encode(..., $SECRET, ...)
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: ^"[A-Za-z0-9\-_]{6,}"$
+
+  - id: securelens-insecure-yaml-load
+    languages: [python]
+    severity: ERROR
+    message: >-
+      yaml.load() without SafeLoader can execute arbitrary code when
+      parsing untrusted YAML. Use yaml.safe_load() instead.
+    metadata:
+      cwe: ["CWE-502"]
+      owasp: ["A08:2021 - Software and Data Integrity Failures"]
+      category: insecure-deserialization
+    pattern: yaml.load($DATA)
+
+  - id: securelens-ssrf-unvalidated-url
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Outbound HTTP request built from a variable without an apparent
+      allow-list check, which may enable SSRF.
+    metadata:
+      cwe: ["CWE-918"]
+      owasp: ["A10:2021 - Server-Side Request Forgery"]
+      category: ssrf
+    patterns:
+      - pattern-either:
+          - pattern: requests.get($URL, ...)
+          - pattern: requests.post($URL, ...)
+      - metavariable-pattern:
+          metavariable: $URL
+          patterns:
+            - pattern-not: "\"...\""

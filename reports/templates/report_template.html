@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SecureLens AI - Security Assessment Report</title>
+<style>
+  :root {
+    --critical: #b91c1c; --high: #ea580c; --medium: #ca8a04; --low: #2563eb; --info: #64748b;
+    --bg: #0f172a; --panel: #ffffff; --accent: #4f46e5;
+  }
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; color: #1e293b; background: #f1f5f9; }
+  header { background: linear-gradient(135deg, #1e293b, #4f46e5); color: white; padding: 32px 40px; }
+  header h1 { margin: 0 0 4px 0; font-size: 26px; }
+  header p { margin: 0; opacity: 0.85; font-size: 14px; }
+  .container { max-width: 980px; margin: -24px auto 40px auto; padding: 0 20px; }
+  .card { background: var(--panel); border-radius: 10px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .score-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+  .score-circle { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 700; color: white; background: conic-gradient(var(--accent) 0%, var(--accent) var(--pct), #e2e8f0 var(--pct)); }
+  .score-circle span { background: white; width: 92px; height: 92px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1e293b; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 12px; }
+  .stat { background: #f8fafc; border-radius: 8px; padding: 14px; text-align: center; }
+  .stat .num { font-size: 22px; font-weight: 700; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; color: white; font-size: 12px; font-weight: 600; }
+  .badge.Critical { background: var(--critical); } .badge.High { background: var(--high); }
+  .badge.Medium { background: var(--medium); } .badge.Low { background: var(--low); } .badge.Info { background: var(--info); }
+  .finding { border-left: 4px solid #e2e8f0; padding: 14px 18px; margin-bottom: 14px; background: #f8fafc; border-radius: 0 8px 8px 0; }
+  .finding.Critical { border-color: var(--critical); } .finding.High { border-color: var(--high); }
+  .finding.Medium { border-color: var(--medium); } .finding.Low { border-color: var(--low); }
+  .finding h3 { margin: 4px 0; font-size: 16px; }
+  .meta { font-size: 13px; color: #64748b; margin-bottom: 8px; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; margin: 10px 0 4px 0; }
+  footer { text-align: center; color: #94a3b8; font-size: 12px; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SecureLens AI — Security Assessment Report</h1>
+  <p>Target: {{ report.report_metadata.target }} &nbsp;|&nbsp; Generated: {{ report.report_metadata.generated_at }} &nbsp;|&nbsp; Scan ID: {{ report.report_metadata.scan_id }}</p>
+</header>
+
+<div class="container">
+  <div class="card">
+    <div class="score-row">
+      <div class="score-circle" style="--pct: {{ report.executive_summary.security_score }}%;">
+        <span>{{ report.executive_summary.security_score }}</span>
+      </div>
+      <div>
+        <h2 style="margin:0;">Grade: {{ report.executive_summary.grade }}</h2>
+        <p style="color:#475569; max-width:520px;">{{ report.final_assessment }}</p>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat"><div class="num">{{ report.executive_summary.total_findings }}</div>Total Findings</div>
+      <div class="stat"><div class="num">{{ report.executive_summary.severity_distribution.Critical }}</div>Critical</div>
+      <div class="stat"><div class="num">{{ report.executive_summary.severity_distribution.High }}</div>High</div>
+      <div class="stat"><div class="num">{{ report.executive_summary.severity_distribution.Medium }}</div>Medium</div>
+      <div class="stat"><div class="num">{{ report.executive_summary.severity_distribution.Low }}</div>Low</div>
+      <div class="stat"><div class="num">{{ report.executive_summary.files_scanned }}</div>Files Scanned</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Methodology</h2>
+    <ul>
+    {% for tool in report.methodology.tools_used %}
+      <li>{{ tool }}</li>
+    {% endfor %}
+    </ul>
+    <p style="color:#64748b; font-size:13px;">{{ report.methodology.note }}</p>
+  </div>
+
+  <div class="card">
+    <h2>Findings ({{ report.findings|length }})</h2>
+    {% for f in report.findings %}
+    <div class="finding {{ f.severity }}">
+      <span class="badge {{ f.severity }}">{{ f.severity }}</span>
+      <span class="badge" style="background:#334155;">{{ f.category }}</span>
+      <span class="badge" style="background:#0ea5e9;">Confidence {{ (f.confidence * 100) | round | int }}%</span>
+      <h3>{{ f.category }} — {{ f.file_path }}:{{ f.line_start }}</h3>
+      <div class="meta">Detected by: {{ f.source_tool }} &nbsp;|&nbsp;
+        CWE: {{ f.cwe_ids | join(', ') if f.cwe_ids else 'N/A' }} &nbsp;|&nbsp;
+        OWASP: {{ f.owasp_ids | join(', ') if f.owasp_ids else 'N/A' }}</div>
+
+      <div class="section-title">Description</div>
+      <p>{{ f.description }}</p>
+
+      {% if f.evidence %}
+      <div class="section-title">Evidence</div>
+      <pre>{{ f.evidence }}</pre>
+      {% endif %}
+
+      {% if f.ai_explanation %}
+      <div class="section-title">AI Explanation (RAG-grounded)</div>
+      <p>{{ f.ai_explanation }}</p>
+      {% if f.rag_sources %}
+      <p style="font-size:12px; color:#64748b;">Sources: {{ f.rag_sources | join(', ') }}</p>
+      {% endif %}
+      {% endif %}
+
+      {% if f.remediation %}
+      <div class="section-title">Remediation</div>
+      <p>{{ f.remediation }}</p>
+      {% endif %}
+
+      {% if f.ai_fix %}
+      <div class="section-title">AI-Suggested Fix
+        {% if f.fix_verified == true %} — ✅ Verified by re-scan{% elif f.fix_verified == false %} — ⚠️ Not yet fully verified{% endif %}
+      </div>
+      <pre>{{ f.ai_fix }}</pre>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <h2>Final Security Assessment</h2>
+    <p>{{ report.final_assessment }}</p>
+  </div>
+</div>
+
+<footer>
+  Generated by SecureLens AI — for authorized security testing of code you own or are permitted to test.
+</footer>
+</body>
+</html>

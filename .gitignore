@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.log
+chroma_db/
+data/vector_store/
+uploads/
+reports_output/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+*.egg-info/
